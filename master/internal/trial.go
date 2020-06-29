@@ -226,6 +226,16 @@ func newTrial(
 
 func (t *trial) Receive(ctx *actor.Context) error {
 	switch msg := ctx.Message().(type) {
+	case actor.ChildFailed:
+		ctx.Log().Infof("trial received %T %s", msg, msg.Child.Address())
+	case actor.ChildStopped:
+		ctx.Log().Infof("trial received %T %s", msg, msg.Child.Address())
+	case searcher.CompletedMessage:
+		ctx.Log().Infof("trial received %T %s", msg, msg.Workload)
+	default:
+		ctx.Log().Infof("trial received %T %+v", msg, msg)
+	}
+	switch msg := ctx.Message().(type) {
 	case actor.PreStart:
 		ctx.AddLabel("experiment-id", t.experiment.ID)
 

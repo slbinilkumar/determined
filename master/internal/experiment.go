@@ -252,6 +252,17 @@ func restoreExperiment(master *Master, expModel *model.Experiment) error {
 
 func (e *experiment) Receive(ctx *actor.Context) error {
 	switch msg := ctx.Message().(type) {
+	case actor.ChildFailed:
+		ctx.Log().Infof("experiment received %T %s", msg, msg.Child.Address())
+	case actor.ChildStopped:
+		ctx.Log().Infof("experiment received %T %s", msg, msg.Child.Address())
+	case searcher.CompletedMessage:
+		ctx.Log().Infof("experiment received %T %s", msg, msg.Workload)
+	default:
+		ctx.Log().Infof("experiment received %T %+v", msg, msg)
+	}
+
+	switch msg := ctx.Message().(type) {
 	// Searcher-related messages.
 	case actor.PreStart:
 		telemetry.ReportExperimentCreated(ctx.Self().System(), *e.Experiment)
