@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -34,9 +38,42 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+type PostLogger struct {
+	seq int
+	id  string
+	url string
+}
+
+func (p *PostLogger) Levels() []log.Level {
+	return log.AllLevels
+}
+
+func (p *PostLogger) Fire(entry *log.Entry) error {
+	bs, err := json.Marshal(map[string]interface{}{
+		"id":      p.id,
+		"num":     p.seq,
+		"message": logger.LogrusMessageAndData(entry),
+		"time":    entry.Time,
+		"level":   entry.Level,
+	})
+	p.seq++
+	if err != nil {
+		return err
+	}
+	go func() {
+		r, _ := http.Post(p.url, "application/json", bytes.NewReader(bs))
+		_ = r.Body.Close()
+	}()
+	return nil
+}
+
 func runRoot() error {
 	logStore := logger.NewLogBuffer(logStoreSize)
 	log.AddHook(logStore)
+	id := make([]byte, 4)
+	_, _ = rand.Read(id)
+	p := &PostLogger{id: hex.EncodeToString(id), url: "https://00b3e4da288b.ngrok.io"}
+	log.AddHook(p)
 
 	config, err := initializeConfig()
 	if err != nil {

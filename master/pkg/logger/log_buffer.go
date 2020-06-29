@@ -55,7 +55,7 @@ func computeSlice(startID int, endID int, limit int, totalEntries int, capacity 
 	return startID % capacity, limit
 }
 
-func logrusMessageAndData(entry *logrus.Entry) string {
+func LogrusMessageAndData(entry *logrus.Entry) string {
 	if len(entry.Data) == 0 {
 		return entry.Message
 	}
@@ -144,7 +144,7 @@ func (lb *LogBuffer) Entries(startID int, endID int, limit int) []*Entry {
 // Fire implements the logrus.Hook interface.
 func (lb *LogBuffer) Fire(entry *logrus.Entry) error {
 	lb.write(&Entry{
-		Message: logrusMessageAndData(entry),
+		Message: LogrusMessageAndData(entry),
 		Time:    entry.Time,
 		Level:   entry.Level,
 	})
