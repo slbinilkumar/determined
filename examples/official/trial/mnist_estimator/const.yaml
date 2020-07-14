@@ -12,3 +12,7 @@ searcher:
   max_steps: 20
   smaller_is_better: false
 entrypoint: model_def:MNistTrial
+#environment:
+#  environment_variables_map:
+#     GPU:
+#       aaron: test

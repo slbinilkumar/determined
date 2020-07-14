@@ -12,8 +12,9 @@ import (
 
 // Environment configures the environment of a Determined command or experiment.
 type Environment struct {
-	Image                RuntimeItem  `json:"image"`
-	EnvironmentVariables RuntimeItems `json:"environment_variables,omitempty"`
+	Image                   RuntimeItem     `json:"image"`
+	EnvironmentVariables    RuntimeItems    `json:"environment_variables,omitempty"`
+	EnvironmentVariablesMap RuntimeItemsMap `json:"environment_variables_map,omitempty"`
 
 	Ports          map[string]int    `json:"ports"`
 	RegistryAuth   *types.AuthConfig `json:"registry_auth,omitempty"`
@@ -56,7 +57,7 @@ func (r *RuntimeItem) For(deviceType device.Type) string {
 	}
 }
 
-// RuntimeItems configures the runtime environment variables.
+// RuntimeItems configures the runtime environment variables as stirngs.
 type RuntimeItems struct {
 	CPU []string `json:"cpu,omitempty"`
 	GPU []string `json:"gpu,omitempty"`
@@ -82,6 +83,44 @@ func (r *RuntimeItems) UnmarshalJSON(data []byte) error {
 
 // For returns the value for the provided device type.
 func (r *RuntimeItems) For(deviceType device.Type) []string {
+	switch deviceType {
+	case device.CPU:
+		return r.CPU
+	case device.GPU:
+		return r.GPU
+	default:
+		panic(fmt.Sprintf("unexpected device type: %s", deviceType))
+	}
+}
+
+// RuntimeItemsMap configures the runtime environment variables as a map.
+type RuntimeItemsMap struct {
+	CPU map[string]string `json:"cpu,omitempty"`
+	GPU map[string]string `json:"gpu,omitempty"`
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+func (r *RuntimeItemsMap) UnmarshalJSON(data []byte) error {
+	var plain map[string]string
+	if err := json.Unmarshal(data, &plain); err == nil {
+		if len(plain) > 0 {
+			r.CPU = plain
+			r.GPU = plain
+		}
+		return nil
+	}
+	type DefaultParser RuntimeItemsMap
+	var jsonItems DefaultParser
+	if err := json.Unmarshal(data, &jsonItems); err != nil {
+		return errors.Wrapf(err, "failed to parse runtime items")
+	}
+	r.CPU = jsonItems.CPU
+	r.GPU = jsonItems.GPU
+	return nil
+}
+
+// For returns the value for the provided device type.
+func (r *RuntimeItemsMap) For(deviceType device.Type) map[string]string {
 	switch deviceType {
 	case device.CPU:
 		return r.CPU

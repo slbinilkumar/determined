@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -239,18 +240,12 @@ func (t *tensorboardManager) newTensorBoard(
 	additionalFiles = append(additionalFiles,
 		commandReq.AgentUserGroup.OwnedArchiveItem(expConfPath, eConf, 0700, tar.TypeReg))
 
-	// Multiple experiments may have different s3 credentials. We sort the
-	// experiments in ascending experiment ID order and dedupicate the
-	// environment variables by key name. This gives the behavior of selecting
-	// the most recent s3 credentials to start the tensorboard process with.
-	envVars := getEnvVars(uniqEnvVars)
-
 	// Select a random port from the range to assign to TensorBoard. In host
 	// mode, this mitigates the risk of multiple TensorBoard processes binding
 	// the same port on an agent.
 	port := getPort(minTensorBoardPort, maxTensorBoardPort)
 	config.Environment.Ports = map[string]int{"tensorboard": port}
-	envVars = append(envVars, fmt.Sprintf("TENSORBOARD_PORT=%d", port))
+	uniqEnvVars["TENSORBOARD_PORT"] = strconv.Itoa(port)
 
 	config.Description = fmt.Sprintf(
 		"TensorBoard (%s)",
@@ -258,7 +253,8 @@ func (t *tensorboardManager) newTensorBoard(
 	)
 	config.Entrypoint = []string{tensorboardEntrypointFile, "--logdir", strings.Join(logDirs, ",")}
 	config.Resources.Slots = tensorboardResourcesSlots
-	config.Environment.EnvironmentVariables = model.RuntimeItems{CPU: envVars, GPU: envVars}
+	config.Environment.EnvironmentVariablesMap = model.RuntimeItemsMap{
+		CPU: uniqEnvVars, GPU: uniqEnvVars}
 	config.BindMounts = getMounts(uniqMounts)
 
 	return &command{
@@ -340,14 +336,4 @@ func getMounts(m map[model.BindMount]bool) []model.BindMount {
 	}
 
 	return bindMounts
-}
-
-func getEnvVars(m map[string]string) []string {
-	var envVars []string
-
-	for k, v := range m {
-		envVars = append(envVars, fmt.Sprintf("%s=%s", k, v))
-	}
-
-	return envVars
 }

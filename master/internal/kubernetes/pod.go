@@ -505,7 +505,7 @@ func (p *pod) startPodForTrial(ctx *actor.Context) error {
 	}
 
 	envVars, err := p.configureEnvVars(
-		tasks.TrialEnvVars(p.taskSpec, rendezvousPorts),
+		tasks.TrialEnvVars(p.taskSpec, rendezvousPorts, deviceType),
 		p.taskSpec.StartContainer.ExperimentConfig.Environment,
 		deviceType,
 	)
@@ -560,7 +560,7 @@ func (p *pod) startPodForCommand(ctx *actor.Context) error {
 	}
 
 	envVars, err := p.configureEnvVars(
-		tasks.CommandEnvVars(p.taskSpec),
+		tasks.CommandEnvVars(p.taskSpec, deviceType),
 		p.taskSpec.StartCommand.Config.Environment,
 		deviceType,
 	)
@@ -611,7 +611,7 @@ func (p *pod) startPodForGC(ctx *actor.Context) error {
 	}
 
 	envVars, err := p.configureEnvVars(
-		tasks.GCEnvVars(),
+		tasks.GCEnvVars(p.taskSpec, deviceType),
 		p.taskSpec.GCCheckpoints.ExperimentConfig.Environment,
 		deviceType,
 	)

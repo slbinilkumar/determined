@@ -68,9 +68,13 @@ func getUser(agentUserGroup *model.AgentUserGroup) string {
 }
 
 // CommandEnvVars configures environment variables for cmd tasks.
-func CommandEnvVars(t TaskSpec) map[string]string {
+func CommandEnvVars(t TaskSpec, deviceType device.Type) map[string]string {
 	envVarsMap := defaultEnvVars()
 	envVarsMap["DET_TASK_ID"] = t.TaskID
+	for k, v := range t.StartCommand.Config.Environment.EnvironmentVariablesMap.For(deviceType) {
+		envVarsMap[k] = v
+	}
+
 	return envVarsMap
 }
 
@@ -93,7 +97,7 @@ func startCommand(t TaskSpec) container.Spec {
 	if len(t.Devices) > 0 {
 		deviceType = t.Devices[0].Type
 	}
-	envVarsMap := CommandEnvVars(t)
+	envVarsMap := CommandEnvVars(t, deviceType)
 	envVars := make([]string, 0, len(envVarsMap))
 	for envVarKey, envVarValue := range envVarsMap {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", envVarKey, envVarValue))
@@ -174,7 +178,7 @@ func TrialDockerMounts(exp StartContainer) []mount.Mount {
 }
 
 // TrialEnvVars returns environment variables for a trial.
-func TrialEnvVars(t TaskSpec, rendezvousPorts []string) map[string]string {
+func TrialEnvVars(t TaskSpec, rendezvousPorts []string, deviceType device.Type) map[string]string {
 	exp := *t.StartContainer
 
 	networkInterface := t.TaskContainerDefaults.DtrainNetworkInterface
@@ -199,6 +203,11 @@ func TrialEnvVars(t TaskSpec, rendezvousPorts []string) map[string]string {
 	}
 	if t.TaskContainerDefaults.NCCLPortRange != "" {
 		envVars["GLOO_PORT_RANGE"] = t.TaskContainerDefaults.NCCLPortRange
+	}
+
+	for k, v := range t.StartContainer.ExperimentConfig.Environment.EnvironmentVariablesMap.For(
+		deviceType) {
+		envVars[k] = v
 	}
 
 	return envVars
@@ -236,7 +245,7 @@ func startContainer(t TaskSpec) container.Spec {
 		ports[port] = struct{}{}
 	}
 
-	envVarsMap := TrialEnvVars(t, rPortsEnvVars)
+	envVarsMap := TrialEnvVars(t, rPortsEnvVars, deviceType)
 	envVars := make([]string, 0, len(envVarsMap))
 	for envVarKey, envVarValue := range envVarsMap {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", envVarKey, envVarValue))
@@ -273,8 +282,14 @@ func startContainer(t TaskSpec) container.Spec {
 }
 
 // GCEnvVars returns environment variables for checkpoint gc.
-func GCEnvVars() map[string]string {
-	return defaultEnvVars()
+func GCEnvVars(t TaskSpec, deviceType device.Type) map[string]string {
+	envVars := defaultEnvVars()
+	for k, v := range t.GCCheckpoints.ExperimentConfig.Environment.EnvironmentVariablesMap.For(
+		deviceType) {
+		envVars[k] = v
+	}
+
+	return envVars
 }
 
 // GCDockerMounts returns the host mounts for a gc container.
@@ -346,7 +361,7 @@ func gcCheckpoint(t TaskSpec) container.Spec {
 	if len(t.Devices) > 0 {
 		deviceType = t.Devices[0].Type
 	}
-	envVarsMap := GCEnvVars()
+	envVarsMap := GCEnvVars(t, deviceType)
 	envVars := make([]string, 0, len(envVarsMap))
 	for envVarKey, envVarValue := range envVarsMap {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", envVarKey, envVarValue))
