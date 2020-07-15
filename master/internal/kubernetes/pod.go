@@ -59,6 +59,14 @@ type pod struct {
 	resourcesDeleted bool
 }
 
+type getPodNodeInfo struct{}
+
+type podNodeInfo struct {
+	podName   string
+	numGPUs   int
+	container *container.Container
+}
+
 func newPod(
 	cluster *actor.Ref,
 	clusterID string,
@@ -119,6 +127,13 @@ func (p *pod) Receive(ctx *actor.Context) error {
 		if err := p.deleteKubernetesResources(ctx); err != nil {
 			return err
 		}
+
+	case getPodNodeInfo:
+		ctx.Respond(podNodeInfo{
+			podName:   p.pod.Spec.NodeName,
+			numGPUs:   p.gpus,
+			container: &p.container,
+		})
 
 	case actor.PostStop:
 		if p.logStreamer != nil {
