@@ -44,6 +44,7 @@ type pods struct {
 	masterPort int32
 
 	informer                *actor.Ref
+	eventListener           *actor.Ref
 	podNameToPodHandler     map[string]*actor.Ref
 	containerIDToPodHandler map[string]*actor.Ref
 	podHandlerToMetadata    map[*actor.Ref]podMetadata
@@ -92,6 +93,7 @@ func (p *pods) Receive(ctx *actor.Context) error {
 			return err
 		}
 		p.startPodInformer(ctx)
+		p.startEventListener(ctx)
 
 	case sproto.StartPod:
 		if err := p.receiveStartPod(ctx, msg); err != nil {
@@ -100,6 +102,9 @@ func (p *pods) Receive(ctx *actor.Context) error {
 
 	case podStatusUpdate:
 		p.receivePodStatusUpdate(ctx, msg)
+
+	case podEventUpdate:
+		p.receivePodEventUpdate(ctx, msg)
 
 	case sproto.StopPod:
 		p.receiveStopPod(ctx, msg)
@@ -205,6 +210,12 @@ func (p *pods) startPodInformer(ctx *actor.Context) {
 	ctx.Tell(p.informer, startInformer{})
 }
 
+func (p *pods) startEventListener(ctx *actor.Context) {
+	p.eventListener, _ = ctx.ActorOf(
+		"event-listener", newEventListener(p.clientSet, p.namespace, ctx.Self()))
+	ctx.Tell(p.eventListener, startEventListener{})
+}
+
 func (p *pods) receiveStartPod(ctx *actor.Context, msg sproto.StartPod) error {
 	newPodHandler := newPod(
 		p.cluster, p.clusterID, msg.TaskHandler, p.clientSet, p.namespace, p.masterIP,
@@ -239,6 +250,19 @@ func (p *pods) receivePodStatusUpdate(ctx *actor.Context, msg podStatusUpdate) {
 	if !ok {
 		ctx.Log().WithField("pod name", msg.updatedPod.Name).Warn(
 			"received pod status update for un-registered pod")
+		return
+	}
+
+	ctx.Tell(ref, msg)
+}
+
+func (p *pods) receivePodEventUpdate(ctx *actor.Context, msg podEventUpdate) {
+	ref, ok := p.podNameToPodHandler[msg.podName]
+	if !ok {
+		// We set this to debug mode because we are unable to filter
+		// pods based on their labels the way we do with pod status updates.
+		ctx.Log().WithField("pod name", msg.podName).Debug(
+			"received pod event for an un-registered pod")
 		return
 	}
 

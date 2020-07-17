@@ -119,6 +119,9 @@ func (p *pod) Receive(ctx *actor.Context) error {
 			return err
 		}
 
+	case podEventUpdate:
+		p.receivePodEventUpdate(ctx, msg)
+
 	case sproto.ContainerLog:
 		p.receiveContainerLogs(ctx, msg)
 
@@ -350,6 +353,25 @@ func (p *pod) receiveContainerLogs(ctx *actor.Context, msg sproto.ContainerLog) 
 		PullMessage: msg.PullMessage,
 		RunMessage:  msg.RunMessage,
 		AuxMessage:  msg.AuxMessage,
+	})
+}
+
+func (p *pod) receivePodEventUpdate(ctx *actor.Context, msg podEventUpdate) {
+	// We only forward messages for while pods are starting up.
+	switch p.container.State {
+	case container.Running:
+		return
+	case container.Terminated:
+		return
+	}
+
+	message := fmt.Sprintf("Pod %s: %s", msg.podName, msg.event.Message)
+	ctx.Tell(p.taskHandler, sproto.ContainerLog{
+		Container:   p.container,
+		Timestamp:   msg.event.CreationTimestamp.Time,
+		PullMessage: nil,
+		RunMessage:  nil,
+		AuxMessage:  &message,
 	})
 }
 
