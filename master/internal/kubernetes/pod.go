@@ -368,7 +368,7 @@ func (p *pod) receivePodEventUpdate(ctx *actor.Context, msg podEventUpdate) {
 	message := fmt.Sprintf("Pod %s: %s", msg.podName, msg.event.Message)
 	ctx.Tell(p.taskHandler, sproto.ContainerLog{
 		Container:   p.container,
-		Timestamp:   msg.event.CreationTimestamp.Time,
+		Timestamp:   &msg.event.CreationTimestamp.Time,
 		PullMessage: nil,
 		RunMessage:  nil,
 		AuxMessage:  &message,

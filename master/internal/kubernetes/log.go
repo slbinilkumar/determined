@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"io"
 	"reflect"
-	"time"
 
 	"github.com/docker/docker/pkg/stdcopy"
 
@@ -34,9 +33,8 @@ func newPodLogStreamer(
 	podHandler *actor.Ref,
 ) (*podLogStreamer, error) {
 	logs := podInterface.GetLogs(podName, &k8sV1.PodLogOptions{
-		Follow: true,
-		// TODO(DET-3541): switch over to using k8 timestamps.
-		Timestamps: false,
+		Follow:     true,
+		Timestamps: true,
 	})
 
 	logReader, err := logs.Stream()
@@ -68,7 +66,6 @@ func (p *podLogStreamer) Receive(ctx *actor.Context) error {
 // Write implements the io.Writer interface.
 func (p *podLogStreamer) Write(log []byte) (n int, err error) {
 	p.ctx.Tell(p.podHandler, sproto.ContainerLog{
-		Timestamp: time.Now(),
 		RunMessage: &agent.RunMessage{
 			Value:   string(log),
 			StdType: stdcopy.Stdout,

@@ -22,7 +22,7 @@ type (
 	// It used by the resource providers to communicate internally and with the task handlers.
 	ContainerLog struct {
 		Container container.Container
-		Timestamp time.Time
+		Timestamp *time.Time
 
 		PullMessage *jsonmessage.JSONMessage
 		RunMessage  *agent.RunMessage
@@ -77,6 +77,9 @@ func (c ContainerLog) String() string {
 		panic("unknown log message received")
 	}
 	shortID := c.Container.ID[:8]
-	timestamp := c.Timestamp.UTC().Format(time.RFC3339)
-	return fmt.Sprintf("[%s] %s [%s] || %s", timestamp, shortID, c.Container.State, msg)
+	timestamp := ""
+	if c.Timestamp != nil {
+		timestamp = fmt.Sprintf("[%s]", c.Timestamp.UTC().Format(time.RFC3339))
+	}
+	return fmt.Sprintf("%s %s [%s] || %s", timestamp, shortID, c.Container.State, msg)
 }
