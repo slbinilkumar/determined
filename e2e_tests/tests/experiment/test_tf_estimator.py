@@ -153,7 +153,7 @@ def test_mnist_estimator_data_layer_lfs(tf2: bool) -> None:
 @pytest.mark.e2e_gpu  # type: ignore
 @pytest.mark.parametrize("tf2", [True, False])  # type: ignore
 @pytest.mark.parametrize("storage_type", ["s3"])  # type: ignore
-def test_mnist_estimator_data_layer_s3(tf2: bool, storage_type: str) -> None:
+def test_mnist_estimator_data_layer_s3(tf2: bool, storage_type: str, secrets: Dict[str, str]) -> None:
     run_mnist_estimator_data_layer_test(tf2, storage_type)
 
 
